@@ -207,7 +207,7 @@ compare_runs()
 In this section is implemented a an early-stopping `callbacks()` that stop the training validation accuracy stops improving for more than two epochs. For this we used `EarlyStopping` as a function inside `callbacks`. We specify `patience` = 3 to stop the training when the `accuracy` stop improving for *more than two epochs*.
 
 ```{r}
-model %>% fit(train_generator, validation_generator, epochs = 20,
+model %>% fit(train_generator, validation_generator, epochs = 50,
               callbacks = list(callback_model_checkpoint("cnn.h5"),
                                EarlyStopping(monitor = "accuracy", patience = 3)),
               batch_size = 64)
@@ -256,6 +256,87 @@ In this section we going to implement a CAE with 3 nodes in z layer.
 - Filter sizes
 - Number of filters
 
+*Convolutional Encoder*
+```{r Convolutional Encoder}
+model_enc <- keras_model_sequential() 
+model_enc %>%
+  layer_conv_2d(filters = 16, kernel_size = c(3,3), 
+                activation = "relu", padding = "same",
+                input_shape = input_dim)  %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same") 
+summary(model_enc)
+```
+
+*Convolutional Decoder*
+```{r Convolutional Decoder}
+model_dec <- keras_model_sequential() 
+model_dec %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same",
+                input_shape = c(4, 4, 8))  %>%
+  layer_upsampling_2d(size = c(2,2))  %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same")  %>%
+  layer_upsampling_2d(size = c(2,2))  %>%
+  # Important: no padding 
+  layer_conv_2d(filters = 1, kernel_size = c(3,3), 
+                activation = "relu")  %>%
+  layer_upsampling_2d(size = c(2,2))  
+summary(model_dec)
+```
+
+
+*Autoencoder* 
+```{r}
+CAE<-keras_model_sequential()
+CAE %>%model_enc%>%model_dec
+
+summary(CAE)
+```
+
+
+
+```{r}
+model %>% compile(
+  loss = "mean_squared_error",
+  #optimizer = optimizer_rmsprop(),
+  optimizer = "adam",
+  metrics = c("mean_squared_error")
+)
+
+history <- model %>% fit(
+  x= x_train_cifra, y = x_train_cifra,   # Autoencoder
+  epochs = 5, batch_size = 128, 
+  suffle = TRUE,
+  validation_split = 0.2
+#  validation_data = list(x_test_cifra,x_test_cifra)
+)
+```
+
+## AutoEncoder Prediction
+
+```{r}
+output_cifra<-predict(model,x_test_cifra)
+dim(output_cifra)
+```
+
+### From encoder to decoder
+```{r}
+enc_output_cifra<-predict(model_enc,x_test_cifra)
+dim(enc_output_cifra)
+```
+### From encoder to decoder
+
+```{r}
+dec_output_cifra<-predict(model_dec,enc_output_cifra)
+dim(dec_output_cifra)
+```
 
 
 
