@@ -86,14 +86,14 @@ train_generator <- flow_images_from_directory(
 train_dir,
 train_datagen,
 target_size = c(64, 64),
-batch_size = 20,
+batch_size = 10,
 class_mode = "binary"
 )
 validation_generator <- flow_images_from_directory(
 validation_dir,
 validation_datagen,
 target_size = c(64, 64),
-batch_size = 20,
+batch_size = 10,
 class_mode = "binary"
 )
 batch <- generator_next(train_generator)
@@ -230,7 +230,7 @@ cat('Test loss:', scores[[1]], '\n')
 ### Prediction
 
 ```{r prediction}
-y_pred <-model %>% predict_classes(validation_generator)
+y_pred <-model %>% predict_classes(validation_generator$)
 ```
 
 ### Confusion Matrix
@@ -260,26 +260,29 @@ In this section we going to implement a CAE with 3 nodes in z layer.
 ```{r Convolutional Encoder}
 model_enc <- keras_model_sequential() 
 model_enc %>%
-  layer_conv_2d(filters = 16, kernel_size = c(3,3), 
+  layer_conv_2d(filters = 32, kernel_size = c(3,3), 
                 activation = "relu", padding = "same",
-                input_shape = input_dim)  %>%
+                input_shape = c(64, 64, 3))  %>%
   layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
-  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+  layer_conv_2d(filters = 16, kernel_size = c(3,3), 
                 activation = "relu", padding = "same") %>%
   layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
   layer_conv_2d(filters = 8, kernel_size = c(3,3), 
                 activation = "relu", padding = "same") %>%
-  layer_max_pooling_2d(pool_size = c(2,2), padding = "same") 
+  layer_max_pooling_2d(pool_size = c(3,3), padding = "same") %>%
+  layer_conv_2d(filters = 4, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") 
 summary(model_enc)
 ```
+
 
 *Convolutional Decoder*
 ```{r Convolutional Decoder}
 model_dec <- keras_model_sequential() 
 model_dec %>%
-  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+  layer_conv_2d(filters = 4, kernel_size = c(3,3), 
                 activation = "relu", padding = "same",
-                input_shape = c(4, 4, 8))  %>%
+                input_shape = c(3, 3, 8))  %>%
   layer_upsampling_2d(size = c(2,2))  %>%
   layer_conv_2d(filters = 8, kernel_size = c(3,3), 
                 activation = "relu", padding = "same")  %>%
@@ -302,33 +305,95 @@ summary(CAE)
 
 
 
+
+
+```{r test enc}
+model_enc <- keras_model_sequential() 
+model_enc %>%
+  layer_conv_2d(filters = 16, kernel_size = c(3,3), 
+                activation = "relu", padding = "same",
+                input_shape = c(64, 64, 3))  %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same") %>%
+    layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same") 
+summary(model_enc)
+```
+
+
+
+```{r test dec}
+model_dec <- keras_model_sequential() 
+model_dec %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same",
+                input_shape = c(4, 4, 8))  %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same") %>%
+    layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same") %>%
+     layer_conv_2d(filters = 1, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")
+summary(model_dec)
+
+```
+
+
 ```{r}
-model %>% compile(
+CAE<-keras_model_sequential()
+CAE %>%model_enc%>%model_dec
+```
+
+
+
+```{r}
+CAE %>% compile(
   loss = "mean_squared_error",
   #optimizer = optimizer_rmsprop(),
   optimizer = "adam",
   metrics = c("mean_squared_error")
 )
+summary(CAE)
+```
 
-history <- model %>% fit(
-  x= x_train_cifra, y = x_train_cifra,   # Autoencoder
-  epochs = 5, batch_size = 128, 
-  suffle = TRUE,
-  validation_split = 0.2
-#  validation_data = list(x_test_cifra,x_test_cifra)
+
+```{r}
+history_CAE <- CAE %>% fit(
+  x= train_generator, y = train_generator,   # Autoencoder
+  epochs = 10, batch_size = 64 #alidation_data = list(x_test_cifra,x_test_cifra)
 )
 ```
+```{r}
+history_CAE <- CAE %>% fit(
+  x= train_generator, y = train_generator,   # Autoencoder
+  epochs = 10, batch_size = 64 #alidation_data = list(x_test_cifra,x_test_cifra)
+)
+```
+
 
 ## AutoEncoder Prediction
 
 ```{r}
-output_cifra<-predict(model,x_test_cifra)
+output_cifra<-predict(CAE,train_generator)
 dim(output_cifra)
 ```
 
 ### From encoder to decoder
 ```{r}
-enc_output_cifra<-predict(model_enc,x_test_cifra)
+enc_output_cifra<-predict(model_enc,train_generator)
 dim(enc_output_cifra)
 ```
 ### From encoder to decoder
@@ -336,6 +401,16 @@ dim(enc_output_cifra)
 ```{r}
 dec_output_cifra<-predict(model_dec,enc_output_cifra)
 dim(dec_output_cifra)
+```
+
+
+### Show image
+
+```{r}
+idx<-1
+#x_test_cifra[idx,,,1]
+im<-matrix(train_generator[idx,,,1], nrow=64, ncol=64) 
+image(1:64, 1:64, im, col=gray((0:255)/255))
 ```
 
 
