@@ -96,8 +96,8 @@ history <- model %>% fit(
 model %>% evaluate(validation_generator, validation_generator$labels)
 
 
-#predict
-y_pred <-model %>% predict_classes(validation_generator)
-
-#confusion Matrix
-confusionMatrix(as.factor(validation_generator$labels), as.factor(y_pred))
+# #predict
+# y_pred <-model %>% predict_classes(validation_generator)
+# 
+# #confusion Matrix
+# confusionMatrix(as.factor(validation_generator$labels), as.factor(y_pred))

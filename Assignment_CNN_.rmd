@@ -192,7 +192,15 @@ training_run("cnn_assignment.R", flags = c(hl1 = hl1))
 }  
 ```
 
+If we want see the performance of the runs that we did before:
+```{r view runs}
+View(ls_runs())
+```
 
+In order to compare the models:
+```{r compare}
+compare_runs(ls_runs())
+```
 
 ### `callbacks()` Implemention
 
@@ -200,8 +208,8 @@ In this section is implemented a an early-stopping `callbacks()` that stop the t
 
 ```{r}
 model %>% fit(train_generator, validation_generator, epochs = 10,
-              callbacks = list(callback_model_checkpoint("cnn.h5", period = 2),
-                               callback_reduce_lr_on_plateau(monitor = "val_loss", factor = 0.1)),
+              callbacks = list(callback_model_checkpoint("cnn.h5", save_freq = 2),
+                               callback_reduce_lr_on_plateau(monitor = "accuracy", factor = 0.1)),
               batch_size = 64)
 ```
 
@@ -210,7 +218,13 @@ model %>% fit(train_generator, validation_generator, epochs = 10,
 
 ### Evaluate
 ```{r evaluate}
-model %>% evaluate(validation_generator, validation_generator$labels)
+# evaluate
+scores <- model %>% evaluate(validation_generator, 
+                             validation_generator$labels, 
+                             verbose = 0)
+
+# Output metrics
+cat('Test loss:', scores[[1]], '\n')
 ```
 
 ### Prediction
