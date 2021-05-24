@@ -197,19 +197,19 @@ If we want see the performance of the runs that we did before:
 View(ls_runs())
 ```
 
-In order to compare the models:
+In order to compare the last two models:
 ```{r compare}
-compare_runs(ls_runs())
+compare_runs()
 ```
 
 ### `callbacks()` Implemention
 
-In this section is implemented a an early-stopping `callbacks()` that stop the training validation accuracy stops improving for more than two epochs.
+In this section is implemented a an early-stopping `callbacks()` that stop the training validation accuracy stops improving for more than two epochs. For this we used `EarlyStopping` as a function inside `callbacks`. We specify `patience` = 3 to stop the training when the `accuracy` stop improving for *more than two epochs*.
 
 ```{r}
-model %>% fit(train_generator, validation_generator, epochs = 10,
-              callbacks = list(callback_model_checkpoint("cnn.h5", save_freq = 2),
-                               callback_reduce_lr_on_plateau(monitor = "accuracy", factor = 0.1)),
+model %>% fit(train_generator, validation_generator, epochs = 20,
+              callbacks = list(callback_model_checkpoint("cnn.h5"),
+                               EarlyStopping(monitor = "accuracy", patience = 3)),
               batch_size = 64)
 ```
 
