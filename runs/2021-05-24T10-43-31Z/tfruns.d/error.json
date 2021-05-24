@@ -1,0 +1,4 @@
+{
+  "message": "invalid first argument, must be vector (list or atomic)",
+  "traceback": ["as.array.default(x)", "as.array(x)", "keras_array(x)", "predict_classes(., validation_generator)", "model %>% predict_classes(validation_generator)", "eval(ei, envir)", "eval(ei, envir)", "training_run(\"cnn_assignment.R\", flags = c(hl1 = hl1))"]
+}

@@ -1,0 +1,4 @@
+{
+  "message": "The following flags were provided but not declared: hl1",
+  "traceback": ["stop(\"The following flags were provided but not declared: \", \n    paste(undeclared, collapse = \", \"), call. = FALSE)", "parse_flags(FLAGS, config, file, arguments)", "flags(flag_string(\"batch size\", \"hl1\"))", "eval(ei, envir)", "eval(ei, envir)", "training_run(\"cnn_assignment.R\", flags = c(hl1 = hl1))"]
+}

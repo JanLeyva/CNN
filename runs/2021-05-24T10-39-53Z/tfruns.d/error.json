@@ -1,0 +1,4 @@
+{
+  "message": "el argumento \"default\" está ausente, sin valor por omisión",
+  "traceback": ["structure(class = \"tfruns_flag\", list(name = name, type = type, \n    default = default, description = description))", "flag_definition(name = name, type = \"numeric\", default = as.double(default), \n    description = description)", "flag_numeric(\"hl1\")", "flags(flag_numeric(\"hl1\"))", "eval(ei, envir)", "eval(ei, envir)", "training_run(\"cnn_assignment.R\", flags = c(hl1 = hl1))"]
+}

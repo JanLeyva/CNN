@@ -1,0 +1,6 @@
+{
+  "loss": [0.6817, null, null, null, null],
+  "accuracy": [0.5624, null, null, null, null],
+  "val_loss": [0.6849, null, null, null, null],
+  "val_accuracy": [0.4643, null, null, null, null]
+}
