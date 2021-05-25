@@ -88,16 +88,20 @@ FLAGS <- flags(
 # fit model -------------------------------------------------
 
 history <- model %>% fit(
-  train_generator,
+  train_generator, train_generator$labels,
   epochs = 10, # 10
-  validation_data = validation_generator,batch_size = FLAGS$hl1
+  batch_size = FLAGS$hl1
 )
 # evaluate
 model %>% evaluate(validation_generator, validation_generator$labels)
 
 
-# #predict
-# y_pred <-model %>% predict_classes(validation_generator)
-# 
-# #confusion Matrix
-# confusionMatrix(as.factor(validation_generator$labels), as.factor(y_pred))
+
+y_pred <-model %>% 
+  predict(validation_generator)
+
+y_pred_ <- c()
+for(i in 1:length(y_pred)){
+  ifelse(y_pred[i] > 0.50001, y_pred_[i] <- 1, y_pred_[i] <- 0)
+}
+
