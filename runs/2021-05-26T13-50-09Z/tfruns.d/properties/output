@@ -1,0 +1,98 @@
+
+> if(!require("knitr")) install.packages("knitr")
+
+> if(!require("keras")) install.packages("keras")
+
+> if(!require("kerasR")) install.packages("kerasR")
+
+> if(!require("tfruns")) install.packages("tfruns")
+
+> library("knitr")
+
+> library("keras")
+
+> library(kerasR)
+
+> library(tfruns)
+
+> base_dir<-"~/KOLMOGOROV/Assignment_CNN/malaria/malaria"
+
+> # train directories
+> train_dir<-file.path(base_dir,"train",fsep ="/")
+
+> train_dir_infected<-file.path(train_dir,"infected",fsep = "/")
+
+> train_dir_uninfected<-file.path(train_dir,"uninfected",fsep = "/")
+
+> # vaidation directories
+> validation_dir<-file.path(base_dir,"validation",fsep ="/")
+
+> validation_dir_infected<-file.path(validation_dir,"infected",fsep = "/")
+
+> validation_dir_uninfected<-file.path(validation_dir,"uninfected",fsep = "/")
+
+> # test directories
+> test_dir<-file.path(base_dir,"test",fsep ="/")
+
+> test_dir_infected<-file.path(test_dir,"infected",fsep = "/")
+
+> test_dir_uninfected<-file.path(test_dir,"uninfected",fsep = "/")
+
+> # image_data_generator Generate batches of image data with real-time data augmentation. The data will be looped over (in batches).
+> train_datagen < .... [TRUNCATED] 
+
+> validation_datagen <- image_data_generator(rescale = 1/255) #
+
+> #flow_images_from_directory Generates batches of data from images in a directory (with optional augmented/normalized data)
+> train_generator <- flow .... [TRUNCATED] 
+
+> validation_generator <- flow_images_from_directory(
++   validation_dir,
++   validation_datagen,
++   target_size = c(64, 64),
++   batch_size = 20,
++  .... [TRUNCATED] 
+
+> batch <- generator_next(train_generator)
+
+> str(batch) 
+List of 2
+ $ : num [1:20, 1:64, 1:64, 1:3] 0 0 0 0 0 0 0 0 0 0 ...
+ $ : num [1:20(1d)] 0 1 1 1 0 0 1 0 1 0 ...
+
+> ## CNN definition -------------------------------------------------
+> model <- keras_model_sequential() %>%
++   layer_conv_2d(filters = 32, kernel_s .... [TRUNCATED] 
+
+> # Define the parameters
+> model %>% compile(
++   loss = "binary_crossentropy",
++   optimizer = optimizer_rmsprop(lr = 1e-4),
++   metrics = c("accura ..." ... [TRUNCATED] 
+
+> # history <- model %>% fit(
+> #   train_generator,
+> #   steps_per_epoch = 100, #100
+> #   epochs = 5, # 20
+> #   validation_data = validation_gener .... [TRUNCATED] 
+
+> # fit model -------------------------------------------------
+> 
+> history <- model %>% fit(
++   train_generator, 
++   epochs = 10, # 10
++   validat .... [TRUNCATED] 
+
+> # evaluate
+> model %>% evaluate(validation_generator, validation_generator$labels)
+     loss  accuracy 
+0.5772460 0.6952381 
+
+> y_pred <-model %>% 
++   predict(validation_generator)
+
+> y_pred_ <- c()
+
+> for(i in 1:length(y_pred)){
++   ifelse(y_pred[i] > 0.50001, y_pred_[i] <- 1, y_pred_[i] <- 0)
++ }

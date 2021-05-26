@@ -72,13 +72,13 @@ model %>% compile(
 )
 
 
-history <- model %>% fit(
-  train_generator,
-  steps_per_epoch = 100, #100
-  epochs = 5, # 20
-  validation_data = validation_generator,
-  validation_steps = 50 #50
-)
+# history <- model %>% fit(
+#   train_generator,
+#   steps_per_epoch = 100, #100
+#   epochs = 5, # 20
+#   validation_data = validation_generator,
+#   validation_steps = 50 #50
+# )
 
 # Define FLAGS ---------------------------------------------------------
 FLAGS <- flags(
@@ -88,8 +88,9 @@ FLAGS <- flags(
 # fit model -------------------------------------------------
 
 history <- model %>% fit(
-  train_generator, train_generator$labels,
+  train_generator, 
   epochs = 10, # 10
+  validation_data = validation_generator,
   batch_size = FLAGS$hl1
 )
 # evaluate
@@ -104,4 +105,6 @@ y_pred_ <- c()
 for(i in 1:length(y_pred)){
   ifelse(y_pred[i] > 0.50001, y_pred_[i] <- 1, y_pred_[i] <- 0)
 }
+
+
 

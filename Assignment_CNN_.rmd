@@ -105,6 +105,25 @@ batch <- generator_next(train_generator)
 str(batch) 
 ```
 
+```{r}
+img<-image_dataset_from_directory(test_dir,labels='inferred')
+
+```
+
+
+```{r}
+test_datagen <- image_data_generator(rescale = 1/255) #
+
+test_generator <- flow_images_from_directory(
+test_dir,
+test_datagen,
+target_size = c(64, 64),
+batch_size = 1,
+class_mode = "binary"
+)
+```
+
+
 # CNN definition
 
 ```{r cnn def}
@@ -124,7 +143,7 @@ model <- keras_model_sequential() %>%
 ```
 
  
-```{r}
+```{r cnn summary}
 summary(model)
 ```
 
@@ -141,10 +160,12 @@ We use a loss function `binary crossentropy` because the aim of this CNN is pred
 The metric used is the `accuracy.`
 
 ```{r}
-history <- model %>% fit(
-  train_generator, train_generator$labels,
-  epochs = 10, # 10
-  batch_size = 32
+history <- model %>% fit_generator(
+  train_generator,
+  steps_per_epoch = 100,
+  epochs = 10, 
+  validation_data = validation_generator,
+  validation_steps = 50
 )
 ```
 In order to see the model performance we plot the performance for each epoch of the CNN.
@@ -170,7 +191,7 @@ model %>% save_model_hdf5("cnn.h5")
 
 In order to load the model
 ```{r load_model_hdf5}
-model_load <- load_model_hdf5("cnn.h5")
+# model_load <- load_model_hdf5("cnn.h5")
 ```
 
 
@@ -211,11 +232,12 @@ compare_runs()
 
 In this section is implemented a an early-stopping `callbacks()` that stop the training validation accuracy stops improving for more than two epochs. For this we used `EarlyStopping` as a function inside `callbacks`. We specify `patience` = 3 to stop the training when the `accuracy` stop improving for *more than two epochs*.
 
-```{r}
-model %>% fit(train_generator, train_generator$labels, epochs = 50,
+```{r callback}
+model %>% fit(train_generator, 
+              epochs = 50,
               callbacks = list(callback_model_checkpoint("cnn.h5"),
-                               EarlyStopping(monitor = "accuracy", patience = 3)),
-              batch_size = 10)
+                               EarlyStopping(monitor = "accuracy", 
+                                             patience = 3)))
 ```
 
 
@@ -224,8 +246,8 @@ model %>% fit(train_generator, train_generator$labels, epochs = 50,
 ### Evaluate
 ```{r evaluate}
 # evaluate
-scores <- model %>% evaluate(validation_generator, 
-                             validation_generator$labels, 
+scores <- model %>% evaluate(test_generator, 
+                             test_generator$labels, 
                              verbose = 0)
 
 # Output metrics
@@ -233,11 +255,13 @@ cat('Test loss:', scores[[1]], '\n')
 cat('Test accuracy:', scores[[2]], '\n')
 ```
 
-### Prediction
 
+
+### Prediction
+For predict we going to use `predict()` function that returns a probability of been group 0 or 1, then we will force it to 0 or 1 in order to then do the confusion matrix.
 ```{r prediction}
 y_pred <-model %>% 
-            predict(validation_generator)
+            predict(test_generator)
 
 y_pred_ <- c()
 for(i in 1:length(y_pred)){
@@ -249,10 +273,12 @@ for(i in 1:length(y_pred)){
 
 Keras don't include a Confusion Matrix, for this reason we going to use `caret` package and his `confusionMatrix` function. First of all, we pass the prob bigger than 0.5 to class 1 else to 0. We did this because the image object is a generator and the function `predict_classes` do not accept generators, only vectors list or atomics. 
 ```{r confusion Matrix}
-confusionMatrix(as.factor(validation_generator$labels), as.factor(y_pred_))
+confusionMatrix(as.factor(test_generator$labels), as.factor(y_pred_))
 ```
 
+The result show us the expected, the model overfitting the train data set, as we can see on the first *history* plot, as the train improve his performance linealy the validation set mantain constant and even go down the accuracy. This is a sign of overfitting. 
 
+For futures works, will be interesting apply different techniques for mitigate the overfitting such as dropour and weight decay (L2 regularization) or use data augmentation.
 
 
 # Convolutional AutoEncoder (CAE)
@@ -324,17 +350,17 @@ summary(CAE)
 ```{r test enc}
 model_enc <- keras_model_sequential() 
 model_enc %>%
-  layer_conv_2d(filters = 16, kernel_size = c(3,3), 
+  layer_conv_2d(filters = 3, kernel_size = c(3,3), 
                 activation = "relu", padding = "same",
                 input_shape = c(64, 64, 3))  %>%
-  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
-  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+  layer_max_pooling_2d(pool_size = c(4,4), padding = "same")  %>%
+  layer_conv_2d(filters = 10, kernel_size = c(4,4), 
                 activation = "relu", padding = "same") %>%
   layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
-  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+  layer_conv_2d(filters = 20, kernel_size = c(4,4), 
                 activation = "relu", padding = "same") %>%
   layer_max_pooling_2d(pool_size = c(2,2), padding = "same") %>%
-    layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+    layer_conv_2d(filters = 40, kernel_size = c(8,8), 
                 activation = "relu", padding = "same") %>%
   layer_max_pooling_2d(pool_size = c(2,2), padding = "same") 
 summary(model_enc)
@@ -345,22 +371,24 @@ summary(model_enc)
 ```{r test dec}
 model_dec <- keras_model_sequential() 
 model_dec %>%
-  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+  layer_conv_2d(filters = 40, kernel_size = c(3,3), 
                 activation = "relu", padding = "same",
-                input_shape = c(4, 4, 8))  %>%
-  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
-  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                input_shape = c(2, 2, 40))  %>%
+  layer_upsampling_2d(size = c(2,2)) %>%
+  layer_conv_2d(filters = 20, kernel_size = c(3,3), 
                 activation = "relu", padding = "same") %>%
-  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
-  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+  layer_upsampling_2d(size = c(2,2)) %>%
+  layer_conv_2d(filters = 10, kernel_size = c(3,3), 
                 activation = "relu", padding = "same") %>%
-  layer_max_pooling_2d(pool_size = c(2,2), padding = "same") %>%
-    layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+  layer_upsampling_2d(size = c(2,2)) %>%
+  layer_conv_2d(filters = 3, kernel_size = c(3,3), 
                 activation = "relu", padding = "same") %>%
-  layer_max_pooling_2d(pool_size = c(2,2), padding = "same") %>%
-     layer_conv_2d(filters = 1, kernel_size = c(3,3), 
+  layer_upsampling_2d(size = c(2,2)) %>%
+  layer_conv_2d(filters = 3, kernel_size = c(3,3), 
                 activation = "relu", padding = "same") %>%
-  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")
+    layer_upsampling_2d(size = c(2,2)) %>%
+  layer_conv_2d(filters = 3, kernel_size = c(3,3), 
+                activation = "relu", padding = "same")
 summary(model_dec)
 
 ```
@@ -435,6 +463,11 @@ dim(dec_output_cifra)
 ### Show image
 
 ```{r}
+image_to_array(output_cifra, data_format = c("channels_last", "channels_first"))
+```
+
+
+```{r}
 idx<-1
 #x_test_cifra[idx,,,1]
 im<-matrix(as.numeric(train_generator[[idx]])/255, nrow=64, ncol=64) 
@@ -462,7 +495,72 @@ displayed by both CAE architectures.
 
 
 
+## new CAE ---------------------------
+```{r}
+img<-image_dataset_from_directory(train_generator,labels='inferred')
 
+```
+
+
+
+```{r model_enc 2}
+model_enc <- keras_model_sequential() 
+model_enc %>%
+  layer_conv_2d(filters = 16, kernel_size = c(3,3), 
+                activation = "relu", padding = "same",
+                input_shape = c(28,28,1))  %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same")  %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(pool_size = c(2,2), padding = "same") 
+summary(model_enc)
+```
+
+```{r model_dec}
+model_dec <- keras_model_sequential() 
+model_dec %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same",
+                input_shape = c(4, 4, 8))  %>%
+  layer_upsampling_2d(size = c(2,2))  %>%
+  layer_conv_2d(filters = 8, kernel_size = c(3,3), 
+                activation = "relu", padding = "same")  %>%
+  layer_upsampling_2d(size = c(2,2))  %>%
+  # Important: no padding 
+  layer_conv_2d(filters = 1, kernel_size = c(3,3), 
+                activation = "relu")  %>%
+  layer_upsampling_2d(size = c(2,2))  
+summary(model_dec)
+```
+
+```{r model_Auto}
+model_Auto<-keras_model_sequential()
+model_Auto %>%model_enc%>%model_dec
+
+summary(model_Auto)
+```
+
+```{r}
+model_Auto %>% compile(
+  loss = "mean_squared_error",
+  #optimizer = optimizer_rmsprop(),
+  optimizer = "adam",
+  metrics = c("mean_squared_error")
+)
+
+```
+
+
+```{r}
+history <- model_Auto %>% fit(
+  x= train_generator, y = train_generator,   # Autoencoder
+  epochs = 5
+  #  validation_data = list(x_test_cifra,x_test_cifra)
+)
+```
 
 
 
