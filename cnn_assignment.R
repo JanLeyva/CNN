@@ -1,12 +1,10 @@
 if(!require("knitr")) install.packages("knitr")
 if(!require("keras")) install.packages("keras")
-if(!require("kerasR")) install.packages("kerasR")
 if(!require("tfruns")) install.packages("tfruns")
 
 library("knitr")
 library("keras")
-library(kerasR)
-library(tfruns)
+library("tfruns")
 
 
 base_dir<-"~/KOLMOGOROV/Assignment_CNN/malaria/malaria"
@@ -42,6 +40,14 @@ validation_generator <- flow_images_from_directory(
   validation_datagen,
   target_size = c(64, 64),
   batch_size = 20,
+  class_mode = "binary"
+)
+test_datagen <- image_data_generator(rescale = 1/255) #
+test_generator <- flow_images_from_directory(
+  test_dir,
+  test_datagen,
+  target_size = c(64, 64),
+  batch_size = 1,
   class_mode = "binary"
 )
 batch <- generator_next(train_generator)
@@ -85,26 +91,41 @@ FLAGS <- flags(
   flag_string("hl1", "batch size"))
 
 
-# fit model -------------------------------------------------
+# fit model -----------------------------------------------------------
 
 history <- model %>% fit(
   train_generator, 
-  epochs = 10, # 10
+  epochs = 30, # 10
   validation_data = validation_generator,
   batch_size = FLAGS$hl1
 )
 # evaluate
 model %>% evaluate(validation_generator, validation_generator$labels)
 
+# import images array: -----------------------------------------------
+fnames_inf   <- list.files(test_dir_infected, full.names = TRUE)
+fnames_uninf <- list.files(test_dir_uninfected, full.names = TRUE)
+files_names  <-c(fnames_inf, fnames_uninf)
 
-
-y_pred <-model %>% 
-  predict(validation_generator)
-
-y_pred_ <- c()
-for(i in 1:length(y_pred)){
-  ifelse(y_pred[i] > 0.50001, y_pred_[i] <- 1, y_pred_[i] <- 0)
+img_array <- array(dim = c(length(files_names),64,64,3)) # dimension of the array including images
+for(i in 1:length(files_names)){
+  img<-image_load(files_names[i])
+  img_tensor<-image_to_array(img)
+  img_tensor<-array_reshape(img_tensor,c(1,64,64,3))
+  img_array[i,,,]<-img_tensor/255
 }
+
+test_labels<-as.factor(c( rep(0, length(fnames_inf)), rep(1, length(fnames_uninf)) ))
+
+
+# Predict: -----------------------------------------------------------
+
+predict_test <- model %>% 
+  predict_classes(img_array)
+
+# confusionMatrix: ---------------------------------------------------
+
+confusionMatrix(as.factor(predict_test), test_labels)
 
 
 
